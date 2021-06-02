@@ -1,0 +1,3 @@
+red=com.java.dubbo.RedCar
+black=com.java.dubbo.BlackCar
+com.java.dubbo.CarWrapper

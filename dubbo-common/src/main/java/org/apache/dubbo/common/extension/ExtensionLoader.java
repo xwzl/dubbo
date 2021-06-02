@@ -418,16 +418,20 @@ public class ExtensionLoader<T> {
         if (StringUtils.isEmpty(name)) {
             throw new IllegalArgumentException("Extension name == null");
         }
+        // 获取默认扩展类
         if ("true".equals(name)) {
             return getDefaultExtension();
         }
         final Holder<Object> holder = getOrCreateHolder(name);
         Object instance = holder.get();
+        // 如果有两个线程同时来获取同一个name的扩展点对象，那只会有一个线程会进行创建
         if (instance == null) {
+            // 一个name对应一把锁
             synchronized (holder) {
                 instance = holder.get();
                 if (instance == null) {
-                    instance = createExtension(name, wrap);
+                    // 创建扩展点实例对象
+                    instance = createExtension(name, wrap);  // 创建扩展点对象
                     holder.set(instance);
                 }
             }
@@ -625,22 +629,27 @@ public class ExtensionLoader<T> {
 
     @SuppressWarnings("unchecked")
     private T createExtension(String name, boolean wrap) {
+        // 获取扩展类  {name: Class}  key-Value    接口的所有实现类
         Class<?> clazz = getExtensionClasses().get(name);
         if (clazz == null || unacceptableExceptions.contains(name)) {
             throw findException(name);
         }
         try {
+            // 实例缓存
             T instance = (T) EXTENSION_INSTANCES.get(clazz);
             if (instance == null) {
+                // 创建实例
                 EXTENSION_INSTANCES.putIfAbsent(clazz, clazz.getDeclaredConstructor().newInstance());
                 instance = (T) EXTENSION_INSTANCES.get(clazz);
             }
+            // 依赖注入 IOC
             injectExtension(instance);
 
 
             if (wrap) {
 
                 List<Class<?>> wrapperClassesList = new ArrayList<>();
+                // AOP，cachedWrapperClasses无序
                 if (cachedWrapperClasses != null) {
                     wrapperClassesList.addAll(cachedWrapperClasses);
                     wrapperClassesList.sort(WrapperComparator.COMPARATOR);
@@ -681,19 +690,24 @@ public class ExtensionLoader<T> {
                 if (!isSetter(method)) {
                     continue;
                 }
+                // 利用set方法注入
                 /**
                  * Check {@link DisableInject} to see if we need auto injection for this property
                  */
                 if (method.getAnnotation(DisableInject.class) != null) {
                     continue;
                 }
+                // set方法中的参数类型
                 Class<?> pt = method.getParameterTypes()[0];
                 if (ReflectUtils.isPrimitives(pt)) {
                     continue;
                 }
 
                 try {
+                    // 得到setXxx中的xxx
                     String property = getSetterProperty(method);
+                    // 根据参数类型或属性名，从objectFactory中获取到对象，然后调用set方法进行注入
+                    // AdaptiveExtensionFactory
                     Object object = objectFactory.getExtension(pt, property);
                     if (object != null) {
                         method.invoke(instance, object);
@@ -752,12 +766,14 @@ public class ExtensionLoader<T> {
     }
 
     private Map<String, Class<?>> getExtensionClasses() {
+        // cachedClasses是一个Holder对象，持有的就是一个Map<String, Class<?>>
+        // 为什么要多此一举，也是为了解决并发，Holder对象用来作为锁
         Map<String, Class<?>> classes = cachedClasses.get();
         if (classes == null) {
             synchronized (cachedClasses) {
                 classes = cachedClasses.get();
                 if (classes == null) {
-                    classes = loadExtensionClasses();
+                    classes = loadExtensionClasses(); // 加载、解析文件 Map
                     cachedClasses.set(classes);
                 }
             }
@@ -769,6 +785,7 @@ public class ExtensionLoader<T> {
      * synchronized in getExtensionClasses
      */
     private Map<String, Class<?>> loadExtensionClasses() {
+        // cache接口默认的扩展类
         cacheDefaultExtensionName();
 
         Map<String, Class<?>> extensionClasses = new HashMap<>();
@@ -811,6 +828,7 @@ public class ExtensionLoader<T> {
                                boolean extensionLoaderClassLoaderFirst, boolean overridden, String... excludedPackages) {
         String fileName = dir + type;
         try {
+            // 根据文件中的内容得到urls， 每个url表示一个扩展    http=org.apache.dubbo.rpc.protocol.http.HttpProtocol
             Enumeration<java.net.URL> urls = null;
             ClassLoader classLoader = findClassLoader();
 
@@ -833,6 +851,7 @@ public class ExtensionLoader<T> {
             if (urls != null) {
                 while (urls.hasMoreElements()) {
                     java.net.URL resourceURL = urls.nextElement();
+                    // 遍历url进行加载,把扩展类添加到extensionClasses中
                     loadResource(extensionClasses, classLoader, resourceURL, overridden, excludedPackages);
                 }
             }
@@ -865,6 +884,7 @@ public class ExtensionLoader<T> {
                                 clazz = line;
                             }
                             if (StringUtils.isNotEmpty(clazz) && !isExcluded(clazz, excludedPackages)) {
+                                // 加载类，并添加到extensionClasses中
                                 loadClass(extensionClasses, resourceURL, Class.forName(clazz, true, classLoader), name, overridden);
                             }
                         } catch (Throwable t) {
@@ -898,12 +918,16 @@ public class ExtensionLoader<T> {
                     type + ", class line: " + clazz.getName() + "), class "
                     + clazz.getName() + " is not subtype of interface.");
         }
+        // 当前接口手动指定了Adaptive类
         if (clazz.isAnnotationPresent(Adaptive.class)) {
             cacheAdaptiveClass(clazz, overridden);
         } else if (isWrapperClass(clazz)) {
+            // 是一个Wrapper类
             cacheWrapperClass(clazz);
         } else {
+            // 需要有无参的构造方法
             clazz.getConstructor();
+            // 在文件中没有name，但是在类上指定了Extension的注解上指定了name
             if (StringUtils.isEmpty(name)) {
                 name = findAnnotationName(clazz);
                 if (name.length() == 0) {
@@ -913,9 +937,13 @@ public class ExtensionLoader<T> {
 
             String[] names = NAME_SEPARATOR.split(name);
             if (ArrayUtils.isNotEmpty(names)) {
+                // 缓存一下被Activate注解了的类
                 cacheActivateClass(clazz, names[0]);
+                // 有多个名字
                 for (String n : names) {
+                    // clazz: name
                     cacheName(clazz, n);
+                    // name: clazz
                     saveInExtensionClass(extensionClasses, clazz, n, overridden);
                 }
             }
@@ -953,6 +981,7 @@ public class ExtensionLoader<T> {
      * for compatibility, also cache class with old alibaba Activate annotation
      */
     private void cacheActivateClass(Class<?> clazz, String name) {
+        // 类上Activate注解
         Activate activate = clazz.getAnnotation(Activate.class);
         if (activate != null) {
             cachedActivates.put(name, activate);
