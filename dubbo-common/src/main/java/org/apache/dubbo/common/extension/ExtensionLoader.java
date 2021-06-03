@@ -681,7 +681,7 @@ public class ExtensionLoader<T> {
 
     private T injectExtension(T instance) {
 
-        if (objectFactory == null) {
+         if (objectFactory == null) {
             return instance;
         }
 
@@ -1057,14 +1057,17 @@ public class ExtensionLoader<T> {
     }
 
     private Class<?> getAdaptiveExtensionClass() {
+        // 获取当前接口的所有扩展类
         getExtensionClasses();
         if (cachedAdaptiveClass != null) {
             return cachedAdaptiveClass;
         }
+        // 如果某个接口没有手动指定一个Adaptive类，那么就自动生成一个Adaptive类
         return cachedAdaptiveClass = createAdaptiveExtensionClass();
     }
 
     private Class<?> createAdaptiveExtensionClass() {
+        // cachedDefaultName表示接口默认的扩展类
         String code = new AdaptiveClassCodeGenerator(type, cachedDefaultName).generate();
         ClassLoader classLoader = findClassLoader();
         org.apache.dubbo.common.compiler.Compiler compiler = ExtensionLoader.getExtensionLoader(org.apache.dubbo.common.compiler.Compiler.class).getAdaptiveExtension();
