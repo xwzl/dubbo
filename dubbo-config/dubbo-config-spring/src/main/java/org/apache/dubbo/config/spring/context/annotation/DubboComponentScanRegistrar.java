@@ -53,10 +53,19 @@ public class DubboComponentScanRegistrar implements ImportBeanDefinitionRegistra
     @Override
     public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
 
+        // 拿到DubboComponentScan注解所定义的包路径，扫描该package下的类，识别这些类上
         Set<String> packagesToScan = getPackagesToScan(importingClassMetadata);
 
+        // 注册ServiceAnnotationBeanPostProcessor一个Bean
+        // 实现了BeanDefinitionRegistryPostProcessor接口，所以在Spring启动时会调用postProcessBeanDefinitionRegistry方法
+        // 该方法会进行扫描，扫描@Service注解了的类，然后生成BeanDefinition（会生成两个，一个普通的bean，一个ServiceBean），后续的Spring周期中会生成Bean
+        // 在ServiceBean中会监听ContextRefreshedEvent事件，一旦Spring启动完后，就会进行服务导出
         registerServiceClassPostProcessor(packagesToScan, registry);
 
+        // 注册ReferenceAnnotationBeanPostProcessor
+        // 实现了AnnotationInjectedBeanPostProcessor接口，继而实现了InstantiationAwareBeanPostProcessorAdapter接口
+        // 所以Spring在启动时，在对属性进行注入时会调用AnnotationInjectedBeanPostProcessor接口中的postProcessPropertyValues方法
+        // 在这个过程中会按照@Reference注解的信息去生成一个RefrenceBean对象
         // @since 2.7.6 Register the common beans
         registerCommonBeans(registry);
     }
@@ -70,7 +79,9 @@ public class DubboComponentScanRegistrar implements ImportBeanDefinitionRegistra
      */
     private void registerServiceClassPostProcessor(Set<String> packagesToScan, BeanDefinitionRegistry registry) {
 
+        // 生成一个RootBeanDefinition，对应的beanClass为ServiceAnnotationBeanPostProcessor.class
         BeanDefinitionBuilder builder = rootBeanDefinition(ServiceClassPostProcessor.class);
+        // 将包路径作为在构造ServiceAnnotationBeanPostProcessor时调用构造方法时的传入参数
         builder.addConstructorArgValue(packagesToScan);
         builder.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
         AbstractBeanDefinition beanDefinition = builder.getBeanDefinition();

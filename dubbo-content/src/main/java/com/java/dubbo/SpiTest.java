@@ -4,6 +4,9 @@ import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.extension.ExtensionLoader;
 
 public class SpiTest {
+
+
+
     public static void main(String[] args) {
 
 //        ServiceLoader<Car> cars = ServiceLoader.load(Car.class);

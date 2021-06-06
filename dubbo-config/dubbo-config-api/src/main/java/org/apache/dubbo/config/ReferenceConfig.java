@@ -310,6 +310,7 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
 
         serviceMetadata.getAttachments().putAll(map);
 
+        // 根据
         ref = createProxy(map);
 
         serviceMetadata.setTarget(ref);
