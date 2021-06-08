@@ -123,11 +123,16 @@ public class Environment extends LifecycleAdapter implements FrameworkExt {
         if (this.isConfigCenterFirst()) {
             // The sequence would be: SystemConfiguration -> AppExternalConfiguration -> ExternalConfiguration -> AbstractConfig -> PropertiesConfiguration
             // Config center has the highest priority
+            // JVM环境变量
             prefixedConfiguration.addConfiguration(systemConfiguration);
+            // 操作系统环境变量
             prefixedConfiguration.addConfiguration(environmentConfiguration);
+            // 配置中心APP配置
             prefixedConfiguration.addConfiguration(appExternalConfiguration);
+            // 配置中心Global配置
             prefixedConfiguration.addConfiguration(externalConfiguration);
             prefixedConfiguration.addConfiguration(configuration);
+            // dubbo.properties中的配置
             prefixedConfiguration.addConfiguration(propertiesConfiguration);
         } else {
             // The sequence would be: SystemConfiguration -> AbstractConfig -> AppExternalConfiguration -> ExternalConfiguration -> PropertiesConfiguration

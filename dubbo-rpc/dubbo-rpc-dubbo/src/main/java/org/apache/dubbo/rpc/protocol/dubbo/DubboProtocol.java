@@ -284,6 +284,7 @@ public class DubboProtocol extends AbstractProtocol {
 
         // export service.
         String key = serviceKey(url);
+        // 构造一个Exporter进行服务导出
         DubboExporter<T> exporter = new DubboExporter<T>(invoker, key, exporterMap);
         exporterMap.put(key, exporter);
 
@@ -301,7 +302,9 @@ public class DubboProtocol extends AbstractProtocol {
             }
         }
 
-        openServer(url);
+        // 开启NettyServer
+        openServer(url); //请求--->invocation--->服务key--->exporterMap.get(key)--->exporter--->invoker--->invoker.invoke(invocation)-->执行服务
+        // 特殊的一些序列化机制，比如kryo提供了注册机制来注册类，提高序列化和反序列化的速度
         optimizeSerialization(url);
 
         return exporter;

@@ -216,6 +216,7 @@ public abstract class ServiceConfigBase<T> extends AbstractServiceConfig {
 
     public void completeCompoundConfigs() {
         super.completeCompoundConfigs(provider);
+        // 如果配置了provider，那么则从provider中获取信息赋值其他属性，在这些属性为空的情况下
         if (provider != null) {
             if (notHasSelfProtocolProperty()) {
                 setProtocols(provider.getProtocols());
@@ -229,6 +230,7 @@ public abstract class ServiceConfigBase<T> extends AbstractServiceConfig {
 
     private void convertProtocolIdsToProtocols() {
         if (StringUtils.isEmpty(protocolIds)) {
+            // 如果配置中心没有配置协议，就取默认的协议
             if (CollectionUtils.isEmpty(protocols)) {
                 List<ProtocolConfig> protocolConfigs = ApplicationModel.getConfigManager().getDefaultProtocols();
                 if (protocolConfigs.isEmpty()) {
@@ -242,8 +244,10 @@ public abstract class ServiceConfigBase<T> extends AbstractServiceConfig {
                 setProtocols(protocolConfigs);
             }
         } else {
+            // 如果配置了
             String[] arr = COMMA_SPLIT_PATTERN.split(protocolIds);
             List<ProtocolConfig> tmpProtocols = new ArrayList<>();
+            // 把从配置中心配置的协议添加到服务的协议列表中去
             Arrays.stream(arr).forEach(id -> {
                 if (tmpProtocols.stream().noneMatch(prot -> prot.getId().equals(id))) {
                     Optional<ProtocolConfig> globalProtocol = ApplicationModel.getConfigManager().getProtocol(id);

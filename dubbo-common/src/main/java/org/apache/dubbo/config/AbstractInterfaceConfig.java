@@ -66,7 +66,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
      * The remote service group the customer/provider side will reference
      */
     protected String group;
-    
+
     protected ServiceMetadata serviceMetadata;
     /**
      * Local impl class name for the service interface
@@ -262,7 +262,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         verifyStubAndLocal(local, "Local", interfaceClass);
         verifyStubAndLocal(stub, "Stub", interfaceClass);
     }
-    
+
     public void verifyStubAndLocal(String className, String label, Class<?> interfaceClass){
     	if (ConfigUtils.isNotEmpty(className)) {
             Class<?> localClass = ConfigUtils.isDefault(className) ?
@@ -348,6 +348,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                 setMonitor(interfaceConfig.getMonitor());
             }
         }
+        // 如果配置了module，那么则从module中获取信息赋值其他属性，在这些属性为空的情况下
         if (module != null) {
             if (notHasSelfRegistryProperty()) {
                 setRegistries(module.getRegistries());
@@ -356,6 +357,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                 setMonitor(module.getMonitor());
             }
         }
+        // 如果配置了application，那么则从application中获取信息赋值其他属性，在这些属性为空的情况下
         if (application != null) {
             if (notHasSelfRegistryProperty()) {
                 setRegistries(application.getRegistries());
@@ -366,7 +368,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
             }
         }
     }
-    
+
     protected void computeValidRegistryIds() {
         if (application != null && notHasSelfRegistryProperty()) {
             setRegistries(application.getRegistries());
@@ -606,7 +608,9 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     @Deprecated
     public void setConfigCenter(ConfigCenterConfig configCenter) {
         this.configCenter = configCenter;
+        // 如果配置了ConfigCenter
         if (configCenter != null) {
+            // 从其他位置获取配置中心的相关属性信息，比如配置中心地址
             ConfigManager configManager = ApplicationModel.getConfigManager();
             Collection<ConfigCenterConfig> configs = configManager.getConfigCenters();
             if (CollectionUtils.isEmpty(configs)
@@ -713,14 +717,14 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     public SslConfig getSslConfig() {
         return ApplicationModel.getConfigManager().getSsl().orElse(null);
     }
-    
+
     public void initServiceMetadata(AbstractInterfaceConfig interfaceConfig) {
         serviceMetadata.setVersion(getVersion(interfaceConfig));
         serviceMetadata.setGroup(getGroup(interfaceConfig));
         serviceMetadata.setDefaultGroup(getGroup(interfaceConfig));
         serviceMetadata.setServiceInterfaceName(getInterface());
     }
-    
+
     public String getGroup(AbstractInterfaceConfig interfaceConfig) {
         return StringUtils.isEmpty(this.group) ? (interfaceConfig != null ? interfaceConfig.getGroup() : this.group) : this.group;
     }
@@ -728,7 +732,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     public String getVersion(AbstractInterfaceConfig interfaceConfig) {
         return StringUtils.isEmpty(this.version) ? (interfaceConfig != null ? interfaceConfig.getVersion() : this.version) : this.version;
     }
-    
+
     public String getVersion() {
         return version;
     }
@@ -744,11 +748,11 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     public void setGroup(String group) {
         this.group = group;
     }
-    
+
     public String getInterface() {
         return interfaceName;
     }
-    
+
     public void setInterface(String interfaceName) {
         this.interfaceName = interfaceName;
 //         if (StringUtils.isEmpty(id)) {

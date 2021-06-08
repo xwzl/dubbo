@@ -64,6 +64,9 @@ public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
+        // 如果某一个Service是通过Spring暴露的，
+        // 那么当需要获取该服务时就要从Spring容器中进行获取，
+        // 也就是从applicationContext中获取，所以需要把applicationContext添加到SpringExtensionFactory中去
         SpringExtensionFactory.addApplicationContext(applicationContext);
     }
 
@@ -108,6 +111,8 @@ public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean
     public void exported() {
         super.exported();
         // Publish ServiceBeanExportedEvent
+        // Spring启动完发布ContextRefreshedEvent事件--->服务导出--->发布ServiceBeanExportedEvent
+        // 程序员可以通过Spring中的ApplicationListener来监听服务导出是否完成
         publishExportEvent();
     }
 
