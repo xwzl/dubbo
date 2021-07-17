@@ -52,6 +52,8 @@ public abstract class ListenableRouter extends AbstractRouter implements Configu
     public ListenableRouter(URL url, String ruleKey) {
         super(url);
         this.force = false;
+        // ruleKey为服务名或应用名
+        // 初始化，会绑定一个监听器，负责监听配置中心条件路由的修改，并且会主动从配置中心获取一下当前条件路由的数据并做解析
         this.init(ruleKey);
     }
 
@@ -117,10 +119,14 @@ public abstract class ListenableRouter extends AbstractRouter implements Configu
         if (StringUtils.isEmpty(ruleKey)) {
             return;
         }
+        // 服务名+".condition-router"，或 应用名+".condition-router"
         String routerKey = ruleKey + RULE_SUFFIX;
+        // 绑定一个监听器去监听routerKey对应的路径，当前类ListenableRouter就自带了一个监听器
         ruleRepository.addListener(routerKey, this);
+        // 绑定完监听器后，主动的从配置中心获取一下当前服务或消费者应用的对应的路由配置
         String rule = ruleRepository.getRule(routerKey, DynamicConfiguration.DEFAULT_GROUP);
         if (StringUtils.isNotEmpty(rule)) {
+            // 手动调用监听器处理事件的方法process()
             this.process(new ConfigChangedEvent(routerKey, DynamicConfiguration.DEFAULT_GROUP, rule));
         }
     }

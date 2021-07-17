@@ -58,7 +58,7 @@ import static org.apache.dubbo.config.RegistryConfig.PREFER_REGISTRY_KEY;
 public class ZoneAwareClusterInvoker<T> extends AbstractClusterInvoker<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(ZoneAwareClusterInvoker.class);
-    
+
     private static final String PREFER_REGISTRY_WITH_ZONE_KEY = REGISTRY_KEY + "." + ZONE_KEY;
 
     private final LoadBalance loadBalanceAmongRegistries = ExtensionLoader.getExtensionLoader(LoadBalance.class).getExtension(LOADBALANCE_AMONG_REGISTRIES);
@@ -70,6 +70,7 @@ public class ZoneAwareClusterInvoker<T> extends AbstractClusterInvoker<T> {
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Result doInvoke(Invocation invocation, final List<Invoker<T>> invokers, LoadBalance loadbalance) throws RpcException {
+        // 如果在引入服务时，存在多个invoker，并且某个invoker是default的，则在调用时会使用该invoker
         // First, pick the invoker (XXXClusterInvoker) that comes from the local registry, distinguish by a 'preferred' key.
         for (Invoker<T> invoker : invokers) {
             ClusterInvoker<T> clusterInvoker = (ClusterInvoker<T>) invoker;
@@ -79,9 +80,11 @@ public class ZoneAwareClusterInvoker<T> extends AbstractClusterInvoker<T> {
             }
         }
 
+        // 如果没有default，则取第一个
         // providers in the registry with the same zone
         String zone = invocation.getAttachment(REGISTRY_ZONE);
         if (StringUtils.isNotEmpty(zone)) {
+            // 如果对应的注册中心中没有当前调用的服务信息，则不可用
             for (Invoker<T> invoker : invokers) {
                 ClusterInvoker<T> clusterInvoker = (ClusterInvoker<T>) invoker;
                 if (clusterInvoker.isAvailable() && zone.equals(clusterInvoker.getRegistryUrl().getParameter(PREFER_REGISTRY_WITH_ZONE_KEY))) {

@@ -141,6 +141,7 @@ public class ZookeeperRegistry extends FailbackRegistry {
     public void doSubscribe(final URL url, final NotifyListener listener) {
         try {
             if (ANY_VALUE.equals(url.getServiceInterface())) {
+                // 订阅所有服务
                 String root = toRootPath();
                 ConcurrentMap<NotifyListener, ChildListener> listeners = zkListeners.computeIfAbsent(url, k -> new ConcurrentHashMap<>());
                 ChildListener zkListener = listeners.computeIfAbsent(listener, k -> (parentPath, currentChilds) -> {
@@ -164,20 +165,30 @@ public class ZookeeperRegistry extends FailbackRegistry {
                     }
                 }
             } else {
+                // 单独订阅某一个服务
                 CountDownLatch latch = new CountDownLatch(1);
                 List<URL> urls = new ArrayList<>();
+                // 得到真正要监听的zk上的路径,
                 for (String path : toCategoriesPath(url)) {
+                    // 根据监听地址去拿listeners，如果没有则生成
                     ConcurrentMap<NotifyListener, ChildListener> listeners = zkListeners.computeIfAbsent(url, k -> new ConcurrentHashMap<>());
+                    // 一个NotifyListener对应一个ChildListener
                     ChildListener zkListener = listeners.computeIfAbsent(listener, k -> new RegistryChildListenerImpl(url, k, latch));
                     if (zkListener instanceof RegistryChildListenerImpl) {
                         ((RegistryChildListenerImpl) zkListener).setLatch(latch);
                     }
+                    // 创建zk上路径
                     zkClient.create(path, false);
+                    // 添加真正跟zk相关的ChildListener,ChildListener中的逻辑就是监听到zk上数据发生了变化后会触发的逻辑
                     List<String> children = zkClient.addChildListener(path, zkListener);
                     if (children != null) {
                         urls.addAll(toUrlsWithEmpty(url, path, children));
                     }
                 }
+                // 这里的urls就是从现在所引入的服务的目录下查到的url，比如下面这个三个目录下的路径
+                //"/dubbo/org.apache.dubbo.demo.DemoService/providers"
+                //"/dubbo/org.apache.dubbo.demo.DemoService/configurators"
+                //"/dubbo/org.apache.dubbo.demo.DemoService/routers"
                 notify(url, listener, urls);
                 // tells the listener to run only after the sync notification of main thread finishes.
                 latch.countDown();

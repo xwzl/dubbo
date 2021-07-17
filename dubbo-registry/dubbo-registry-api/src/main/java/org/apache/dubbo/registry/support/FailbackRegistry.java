@@ -364,6 +364,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         try {
             doNotify(url, listener, urls);
         } catch (Exception t) {
+            // 处理通知失败
             // Record a failed registration request to a failed list
             logger.error("Failed to notify addresses for subscribe " + url + ", cause: " + t.getMessage(), t);
         }

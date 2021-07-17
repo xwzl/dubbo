@@ -73,6 +73,9 @@ public class InterfaceCompatibleRegistryProtocol extends RegistryProtocol {
             registry = AbstractRegistryFactory.getDefaultNopRegistryIfNotSupportServiceDiscovery();
         }
 
+        // RegistryDirectory表示动态服务目录，会和注册中心的数据保持同步
+        // type表示一个服务对应一个RegistryDirectory，url表示注册中心地址
+        // 在消费端，最核心的就是RegistryDirectory
         DynamicDirectory<T> directory = new ServiceDiscoveryRegistryDirectory<>(type, url);
         return doCreateInvoker(directory, cluster, registry, type);
     }
