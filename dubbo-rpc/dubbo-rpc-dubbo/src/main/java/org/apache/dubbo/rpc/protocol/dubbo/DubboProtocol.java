@@ -117,6 +117,7 @@ public class DubboProtocol extends AbstractProtocol {
             }
 
             Invocation inv = (Invocation) message;
+            // 转成Invocation对象，要开始用反射执行方法了
             Invoker<?> invoker = getInvoker(channel, inv);
             // need to consider backward-compatibility if it's a callback
             if (Boolean.TRUE.toString().equals(inv.getObjectAttachments().get(IS_CALLBACK_SERVICE_INVOKE))) {
@@ -141,8 +142,11 @@ public class DubboProtocol extends AbstractProtocol {
                     return null;
                 }
             }
+            // 这里设置了，service中才能拿到remoteAddress
             RpcContext.getContext().setRemoteAddress(channel.getRemoteAddress());
+            // 执行服务，得到结果
             Result result = invoker.invoke(inv);
+            // 返回一个CompletableFuture
             return result.thenApply(Function.identity());
         }
 
@@ -247,6 +251,7 @@ public class DubboProtocol extends AbstractProtocol {
         }
 
         //callback
+        // 从请求中拿到serviceKey，从exporterMap中拿到已经导出了的服务
         isCallBackServiceInvoke = isClientSide(channel) && !isStubServiceInvoke;
         if (isCallBackServiceInvoke) {
             path += "." + inv.getObjectAttachments().get(CALLBACK_SERVICE_KEY);
@@ -266,6 +271,7 @@ public class DubboProtocol extends AbstractProtocol {
                     ", channel: consumer: " + channel.getRemoteAddress() + " --> provider: " + channel.getLocalAddress() + ", message:" + getInvocationWithoutData(inv));
         }
 
+        // 拿到服务对应的Invoker
         return exporter.getInvoker();
     }
 
@@ -312,20 +318,23 @@ public class DubboProtocol extends AbstractProtocol {
 
     private void openServer(URL url) {
         // find server.
-        String key = url.getAddress();
+        String key = url.getAddress(); // 获得ip地址和port， 192.168.40.17:20880
         //client can export a service which's only for server to invoke
         boolean isServer = url.getParameter(IS_SERVER_KEY, true);
         if (isServer) {
+            // 缓存Server对象
             ProtocolServer server = serverMap.get(key);
             if (server == null) {
                 synchronized (this) {
                     server = serverMap.get(key);
                     if (server == null) {
+                        // 创建Server，并进行缓存
                         serverMap.put(key, createServer(url));
                     }
                 }
             } else {
                 // server supports reset, use together with override
+                // 服务重新导出时，就会走这里
                 server.reset(url);
             }
         }
@@ -339,19 +348,22 @@ public class DubboProtocol extends AbstractProtocol {
                 .addParameterIfAbsent(HEARTBEAT_KEY, String.valueOf(DEFAULT_HEARTBEAT))
                 .addParameter(CODEC_KEY, DubboCodec.NAME)
                 .build();
+        // 协议的服务器端实现类型，比如：dubbo协议的mina,netty等，http协议的jetty,servlet等，默认为netty
         String str = url.getParameter(SERVER_KEY, DEFAULT_REMOTING_SERVER);
 
         if (str != null && str.length() > 0 && !ExtensionLoader.getExtensionLoader(Transporter.class).hasExtension(str)) {
             throw new RpcException("Unsupported server type: " + str + ", url: " + url);
         }
-
+        // 通过url绑定端口，和对应的请求处理器
         ExchangeServer server;
         try {
+            // requestHandler是请求处理器，类型为ExchangeHandler
+            // 表示从url的端口接收到请求后，requestHandler来进行处理
             server = Exchangers.bind(url, requestHandler);
         } catch (RemotingException e) {
             throw new RpcException("Fail to start server(url: " + url + ") " + e.getMessage(), e);
         }
-
+        // 协议的客户端实现类型，比如：dubbo协议的mina,netty等
         str = url.getParameter(CLIENT_KEY);
         if (str != null && str.length() > 0) {
             Set<String> supportedTypes = ExtensionLoader.getExtensionLoader(Transporter.class).getSupportedExtensions();

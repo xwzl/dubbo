@@ -66,6 +66,7 @@ public class HeaderExchangeServer implements ExchangeServer {
     public HeaderExchangeServer(RemotingServer server) {
         Assert.notNull(server, "server == null");
         this.server = server;
+        // 启动定义关闭Channel的Task
         startIdleCheckTask(getUrl());
     }
 
@@ -260,12 +261,16 @@ public class HeaderExchangeServer implements ExchangeServer {
 
     private void startIdleCheckTask(URL url) {
         if (!server.canHandleIdle()) {
+            // 底层NettyServer自己有心跳机制，那么上层的ExchangeServer就不用开启心跳任务了
             AbstractTimerTask.ChannelProvider cp = () -> unmodifiableCollection(HeaderExchangeServer.this.getChannels());
             int idleTimeout = getIdleTimeout(url);
             long idleTimeoutTick = calculateLeastDuration(idleTimeout);
+
+            // 定义关闭Channel的Task
             CloseTimerTask closeTimerTask = new CloseTimerTask(cp, idleTimeoutTick, idleTimeout);
             this.closeTimerTask = closeTimerTask;
 
+            // 定时运行closeTimerTask
             // init task and start timer.
             IDLE_CHECK_TIMER.newTimeout(closeTimerTask, idleTimeoutTick, TimeUnit.MILLISECONDS);
         }

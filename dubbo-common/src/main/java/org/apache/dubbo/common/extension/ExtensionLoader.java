@@ -253,7 +253,9 @@ public class ExtensionLoader<T> {
      * @see #getActivateExtension(org.apache.dubbo.common.URL, String[], String)
      */
     public List<T> getActivateExtension(URL url, String key, String group) {
+        // 根据key从url中得到值
         String value = url.getParameter(key);
+        // value就是filter的别名，可以有多个
         return getActivateExtension(url, StringUtils.isEmpty(value) ? null : COMMA_SPLIT_PATTERN.split(value), group);
     }
 
@@ -271,8 +273,11 @@ public class ExtensionLoader<T> {
         // solve the bug of using @SPI's wrapper method to report a null pointer exception.
         TreeMap<Class, T> activateExtensionsMap = new TreeMap<>(ActivateComparator.COMPARATOR);
         Set<String> names = CollectionUtils.ofSet(values);
+        // 想要获取的filter的名字不包括"-default"
         if (!names.contains(REMOVE_VALUE_PREFIX + DEFAULT_KEY)) {
             getExtensionClasses();
+            // 缓存了被Activate注解标记了的类（已经被加载进来了的前提下），表示这个扩展点在什么时候能用
+            // 遍历所有的Activate的扩展类
             for (Map.Entry<String, Object> entry : cachedActivates.entrySet()) {
                 String name = entry.getKey();
                 Object activate = entry.getValue();
@@ -288,9 +293,14 @@ public class ExtensionLoader<T> {
                 } else {
                     continue;
                 }
+
+                // group表示想要获取的Filter所在的分组，activateGroup表示当前遍历的Filter所在的分组，看是否匹配
+                // names表示想要获取的Filter的名字，name表示当前遍历的Filter的名字
+                // 如果当前遍历的Filter的名字不在想要获取的Filter的names内，并且names中也没有要排除它，则根据url看能否激活
                 if (isMatchGroup(group, activateGroup)
                         && !names.contains(name)
                         && !names.contains(REMOVE_VALUE_PREFIX + name)
+                        // 查看url的参数中是否存在key为activateValue，并且对应的value不为空
                         && isActive(activateValue, url)) {
                     activateExtensionsMap.put(getExtensionClass(name), getExtension(name));
                 }
@@ -303,6 +313,8 @@ public class ExtensionLoader<T> {
         for (String name : names) {
             if (!name.startsWith(REMOVE_VALUE_PREFIX)
                     && !names.contains(REMOVE_VALUE_PREFIX + name)) {
+
+                // 默认的active放在最前面， 过滤器filter
                 if (DEFAULT_KEY.equals(name)) {
                     if (!loadedExtensions.isEmpty()) {
                         activateExtensions.addAll(0, loadedExtensions);

@@ -96,6 +96,7 @@ public class RouterChain<T> {
     }
 
     private void sort() {
+        // Router接口中有一个默认方法compareTo，会按照priority进行排序
         Collections.sort(routers);
     }
 
@@ -107,6 +108,7 @@ public class RouterChain<T> {
      */
     public List<Invoker<T>> route(URL url, Invocation invocation) {
         List<Invoker<T>> finalInvokers = invokers;
+        // 使用路由对服务提供者进行过滤
         for (Router router : routers) {
             finalInvokers = router.route(finalInvokers, url, invocation);
         }
